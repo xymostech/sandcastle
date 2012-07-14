@@ -15,18 +15,17 @@ base_dir = os.path.join(settings.PROJECT_DIR, "media", "master")
 git_dir = os.path.join(base_dir, ".git")
 
 
-def call_git(command):
-    return subprocess.call(
+def call_git(command, method=subprocess.call):
+    return method(
         ["git", "--git-dir", git_dir, "--work-tree", base_dir] + command)
 
 
 def output_git(command):
-    return subprocess.check_output(
-        ["git", "--git-dir", git_dir, "--work-tree", base_dir] + command)
+    return call_git(command, subprocess.check_output)
 
 
 def blob_or_tree(user, branch, path):
-    info = output_git(["ls-tree", "refs/remotes/" + user + "/" + branch, path])
+    info = output_git(["ls-tree", "refs/remotes/%s/%s" % (user, branch), path])
     return info.split(None, 3)[1]
 
 
@@ -37,12 +36,11 @@ def dirserve(request, branch="", path=""):
         user = 'origin'
 
     if call_git(["show-ref", "--verify", "--quiet",
-                 "refs/remotes/" + user + "/" + branch]):
+                 "refs/remotes/%s/%s" % (user, branch)]):
         raise Http404
 
     file_list = output_git(["ls-tree", "-z", user + "/" + branch + ":" + path])
-
-    file_list = file_list.strip('\0').split('\0')
+    file_list = file_list.rstrip('\0').split('\0')
 
     files = []
 
@@ -55,13 +53,12 @@ def dirserve(request, branch="", path=""):
         files.append(name)
 
     if path:
-        files.insert(0, "..")
+        files.insert(0, '..')
 
-    files = ['<a href="%s">%s</a><br>' % (f, f)
-             for f in files]
+    files = ['<a href="%s">%s</a><br>' % (f, f) for f in files]
 
-    output = ["<h1>Directory for <strong>" + user + ":" + branch + "/" + path +
-              "%s</strong></h1>" % ("" if path == "" else "/")] + files
+    output = ["<h1>Directory for <strong>%s:%s/%s%s</strong></h1>" %
+              (user, branch, path, '' if path == '' else '/')] + files
 
     return HttpResponse(output)
 
@@ -92,11 +89,11 @@ def home(request):
     branch_list = output_git(
         ["for-each-ref", "--format=%(refname)", branch_prefix + "*"])
 
-    branch_list = branch_list.strip().split("\n")
+    branch_list = branch_list.rstrip('\n').split("\n")
 
     branches = []
 
-    for branch in branch_list:
+    for branch in sorted(branch_list):
         if not branch.startswith(branch_prefix):
             raise Exception("Branch %r doesn't start with %r" %
                             (branch, branch_prefix))
@@ -109,8 +106,6 @@ def home(request):
         branches.append({
             'name': branch,
         })
-
-    branches.sort(key=lambda b: b['name'])
 
     with closing(urlopen(
             "https://api.github.com/repos/%s/%s/pulls?per_page=100" %
