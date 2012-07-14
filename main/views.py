@@ -25,22 +25,40 @@ def output_git(command):
 
 
 def blob_or_tree(user, branch, path):
-    info = output_git(["ls-tree", "refs/remotes/%s/%s" % (user, branch), path])
+    if user:
+        info = output_git(["ls-tree", "refs/remotes/%s/%s" % (user, branch),
+            path])
+    else:
+        info = output_git(["ls-tree", "refs/heads/%s" % branch, path])
+
     return info.split(None, 3)[1]
 
 
 def dirserve(request, branch="", path=""):
+    origbranch = branch
+
     if ":" in branch:
         user, branch = branch.split(":")
+        local = False
     else:
-        user = 'origin'
+        local = True
 
-    if call_git(["show-ref", "--verify", "--quiet",
-                 "refs/remotes/%s/%s" % (user, branch)]):
-        raise Http404
+    if local:
+        if call_git(["show-ref", "--verify", "--quiet",
+                     "refs/heads/%s" % branch]):
+            raise Http404
+    else:
+        if call_git(["show-ref", "--verify", "--quiet",
+                     "refs/remotes/%s/%s" % (user, branch)]):
+            raise Http404
 
-    file_list = output_git(["ls-tree", "-z", user + "/" + branch + ":" + path])
-    file_list = file_list.rstrip('\0').split('\0')
+    if local:
+        file_list = output_git(["ls-tree", "-z", "%s:%s" % (branch, path)])
+    else:
+        file_list = output_git(["ls-tree", "-z",
+                                "%s/%s:%s" % (user, branch, path)])
+
+    file_list = file_list.strip('\0').split('\0')
 
     files = []
 
@@ -57,26 +75,38 @@ def dirserve(request, branch="", path=""):
 
     files = ['<a href="%s">%s</a><br>' % (f, f) for f in files]
 
-    output = ["<h1>Directory for <strong>%s:%s/%s%s</strong></h1>" %
-              (user, branch, path, '' if path == '' else '/')] + files
+    output = ["<h1>Directory for <strong>%s/%s%s</strong></h1>" %
+              (origbranch, path, '' if path == '' else '/')] + files
 
     return HttpResponse(output)
 
 
 def fileserve(request, branch="", path=""):
+    origbranch = branch
+
     if ":" in branch:
         user, branch = branch.split(":")
+        local = False
     else:
-        user = 'origin'
+        user = ""
+        local = True
 
-    if call_git(["show-ref", "--verify", "--quiet",
-                 "refs/remotes/" + user + "/" + branch]):
-        raise Http404
+    if local:
+        if call_git(["show-ref", "--verify", "--quiet",
+                     "refs/heads/" + branch]):
+            raise Http404
+    else:
+        if call_git(["show-ref", "--verify", "--quiet",
+                     "refs/remotes/" + user + "/" + branch]):
+            raise Http404
 
     if blob_or_tree(user, branch, path) == "tree":
-        return dirserve(request, user + ":" + branch, path)
+        return dirserve(request, origbranch, path)
 
-    file = output_git(["show", user + "/" + branch + ":" + path])
+    if local:
+        file = output_git(["show", branch + ":" + path])
+    else:
+        file = output_git(["show", user + "/" + branch + ":" + path])
     type = mimetypes.guess_type(request.path)[0]
 
     return HttpResponse(file, content_type=type)
@@ -105,6 +135,7 @@ def home(request):
 
         branches.append({
             'name': branch,
+            'path': "origin:" + branch
         })
 
     with closing(urlopen(
@@ -135,7 +166,10 @@ def home(request):
 
 
 def render_diff(request, title, body, patch, user, branch):
-    name = "%s:%s" % (user, branch)
+    if user:
+        name = "%s:%s" % (user, branch)
+    else:
+        name = branch
     castle = "/castles/%s" % name
 
     patch = html.escape(patch)
@@ -161,8 +195,19 @@ def render_diff(request, title, body, patch, user, branch):
 
 
 def phab(request, id=None):
+    os.chdir(os.path.join(settings.PROJECT_DIR, "media", "master"))
 
-    return ""
+    patch_name = "D"+id
+    branch_name = "arcpatch-"+patch_name
+
+    subprocess.call(["git", "branch", "-D", branch_name])
+    subprocess.call(["arc", "patch", patch_name])
+    subprocess.call(["git", "checkout", "master"])
+
+    patch = output_git(["diff", "refs/remotes/origin/master...refs/heads/" +
+                        branch_name])
+
+    return render_diff(request, patch_name, "", patch, "", branch_name)
 
 
 def pull(request, number=None):
