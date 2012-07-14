@@ -7,7 +7,6 @@ from local_settings import *
 PROJECT_DIR = path.dirname(__file__)
 
 ADMINS = (
-    ('Julian Pulgarin', 'jp@julianpulgarin.com'),
 )
 
 # Following users are emailed when a broken link is detected
