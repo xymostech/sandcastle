@@ -197,11 +197,14 @@ def render_diff(request, title, body, patch, user, branch):
 def phab(request, id=None):
     os.chdir(os.path.join(settings.PROJECT_DIR, "media", "master"))
 
-    patch_name = "D"+id
-    branch_name = "arcpatch-"+patch_name
+    patch_name = "D" + id
+    branch_name = "arcpatch-" + patch_name
+    new_branch_name = branch_name + "-new"
 
-    subprocess.call(["git", "branch", "-D", branch_name])
-    subprocess.call(["arc", "patch", patch_name])
+    subprocess.call(["git", "checkout", "master"])
+    subprocess.call(["git", "checkout", "-b", new_branch_name])
+    subprocess.call(["arc", "patch", "--nobranch", patch_name])
+    subprocess.call(["git", "branch", "-M", new_branch_name, branch_name])
     subprocess.call(["git", "checkout", "master"])
 
     patch = output_git(["diff", "refs/remotes/origin/master...refs/heads/" +
