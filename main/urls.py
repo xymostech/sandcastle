@@ -1,7 +1,11 @@
 from django.conf.urls.defaults import patterns, url
 
 urlpatterns = patterns('main.views',
-    url(r'^$', 'repo', name='repo'),
-    url(r'^pull/(?P<number>\d+)/$', 'sandcastle', name='sandcastle'),
-    url(r'^branch/(?P<branch>.*)/$', 'sandcastle', name='sandcastle'),
+    url(r'^$', 'home'),
+    url(r'^pull/(?P<number>\d+)/$', 'pull', name='pull'),
+    url(r'^branch/(?P<branch>.*)/$', 'branch', name='branch'),
+    url(r'^phab/(?P<id>.*)/$', 'phab', name='phab'),
+    url(r'^castles/(?P<branch>[^/]*)/$', 'dirserve'),
+    url(r'^castles/(?P<branch>[^/]*)/(?P<path>.*)/$', 'dirserve'),
+    url(r'^castles/(?P<branch>[^/]*)/(?P<path>.*)$', 'fileserve')
 )
