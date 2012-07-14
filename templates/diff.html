@@ -3,6 +3,7 @@
 {% block content %}
 <h2>{{ title }}</h2>
 <p>{{ body }}</p>
+<p><a href="{% url castle branch=branch %}">Browse tree</a></p>
 <ul>
 {% for filename in all_files %}
 <li><a href="{{ castle }}/{{ filename }}">{{ filename }}</a></li>
