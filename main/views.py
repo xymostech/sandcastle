@@ -49,16 +49,13 @@ def dirserve(request, branch="", path=""):
     if ":" in branch:
         user, branch = branch.split(":")
         local = False
+        ref = "refs/remotes/%s/%s" % (user, branch)
     else:
         local = True
+        ref = "refs/heads/%s" % branch
 
     try:
-        if local:
-            check_call_git(["show-ref", "--verify", "--quiet",
-                            "refs/heads/%s" % branch])
-        else:
-            check_call_git(["show-ref", "--verify", "--quiet",
-                            "refs/remotes/%s/%s" % (user, branch)])
+        check_call_git(["show-ref", "--verify", "--quiet", ref])
     except subprocess.CalledProcessError:
         raise Http404
 
@@ -98,17 +95,14 @@ def fileserve(request, branch="", path=""):
     if ":" in branch:
         user, branch = branch.split(":")
         local = False
+        ref = "refs/remotes/%s/%s" % (user, branch)
     else:
         user = ""
         local = True
+        ref = "refs/heads/%s" % branch
 
     try:
-        if local:
-            check_call_git(["show-ref", "--verify", "--quiet",
-                            "refs/heads/%s" % branch])
-        else:
-            check_call_git(["show-ref", "--verify", "--quiet",
-                            "refs/remotes/%s/%s" % (user, branch)])
+        check_call_git(["show-ref", "--verify", "--quiet", ref])
     except subprocess.CalledProcessError:
         raise Http404
 
