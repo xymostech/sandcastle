@@ -22,6 +22,10 @@ def call_git(command, method=subprocess.call):
         ["git", "--git-dir", git_dir, "--work-tree", base_dir] + command)
 
 
+def check_call_git(command):
+    return call_git(command, subprocess.check_call)
+
+
 def check_output_git(command):
     return call_git(command, subprocess.check_output)
 
@@ -47,11 +51,11 @@ def dirserve(request, branch="", path=""):
 
     if local:
         if call_git(["show-ref", "--verify", "--quiet",
-                     "refs/heads/%s" % branch]):
+                     "refs/heads/%s" % branch]) != 0:
             raise Http404
     else:
         if call_git(["show-ref", "--verify", "--quiet",
-                     "refs/remotes/%s/%s" % (user, branch)]):
+                     "refs/remotes/%s/%s" % (user, branch)]) != 0:
             raise Http404
 
     if local:
@@ -96,11 +100,11 @@ def fileserve(request, branch="", path=""):
 
     if local:
         if call_git(["show-ref", "--verify", "--quiet",
-                     "refs/heads/" + branch]):
+                     "refs/heads/" + branch]) != 0:
             raise Http404
     else:
         if call_git(["show-ref", "--verify", "--quiet",
-                     "refs/remotes/" + user + "/" + branch]):
+                     "refs/remotes/" + user + "/" + branch]) != 0:
             raise Http404
 
     if blob_or_tree(user, branch, path) == "tree":
@@ -116,7 +120,7 @@ def fileserve(request, branch="", path=""):
 
 
 def home(request):
-    call_git(["fetch", "-p", "origin"])
+    check_call_git(["fetch", "-p", "origin"])
 
     branch_prefix = "refs/remotes/origin/"
     branch_list = check_output_git(
@@ -216,11 +220,16 @@ def phab(request, id=None):
     branch_name = "arcpatch-" + patch_name
     new_branch_name = branch_name + "-new"
 
-    subprocess.call(["git", "checkout", "master"])
-    subprocess.call(["git", "checkout", "-b", new_branch_name])
-    subprocess.call(["arc", "patch", "--nobranch", patch_name])
-    subprocess.call(["git", "branch", "-M", new_branch_name, branch_name])
-    subprocess.call(["git", "checkout", "master"])
+    check_call_git(["checkout", "master"])
+    try:
+        check_call_git(["checkout", "-b", new_branch_name])
+        subprocess.check_call(["arc", "patch", "--nobranch", patch_name])
+        check_call_git(["branch", "-M", new_branch_name, branch_name])
+        check_call_git(["checkout", "master"])
+    except subprocess.CalledProcessError, e:
+        call_git(["branch", "-D", new_branch_name])
+        check_call_git(["checkout", "master"])
+        raise Http404
 
     patch = check_output_git(["diff", "refs/remotes/origin/master..."
                               "refs/heads/" + branch_name])
@@ -242,9 +251,11 @@ def pull(request, number=None):
     pull_data = json.loads(pull_data)
     user, branch = pull_data['head']['label'].split(":")
 
+    # Don't check_call the "git remote add"; we expect it to fail if the remote
+    # exists already
     call_git(["remote", "add", user,
               "git://github.com/%s/%s.git" % (user, settings.SANDCASTLE_REPO)])
-    call_git(["fetch", user])
+    check_call_git(["fetch", user])
 
     with closing(urlopen(pull_data['diff_url'])) as u:
         patch = encoding.force_unicode(u.read(), errors='ignore')
@@ -263,9 +274,11 @@ def branch(request, branch=None):
     else:
         user = "origin"
 
+    # Don't check_call the "git remote add"; we expect it to fail if the remote
+    # exists already
     call_git(["remote", "add", user, "git://github.com/%s/%s.git" %
              (user, settings.SANDCASTLE_REPO)])
-    call_git(["fetch", user])
+    check_call_git(["fetch", user])
 
     patch = check_output_git(["diff", "refs/remotes/origin/master..."
                               "refs/remotes/" + user + "/" + branch])
