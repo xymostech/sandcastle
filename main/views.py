@@ -1,5 +1,6 @@
 from urllib2 import urlopen, HTTPError
 from contextlib import closing
+import errno
 import json
 import os
 import re
@@ -197,6 +198,18 @@ def render_diff(request, title, body, patch, user, branch):
 
 def phab(request, id=None):
     os.chdir(os.path.join(settings.PROJECT_DIR, "media", "master"))
+
+    # arc gets confused if this file doesn't exist with the proper contents
+    if not os.path.isfile('.git/arc/default-relative-commit'):
+        try:
+            os.mkdir('.git/arc')
+        except OSError, e:
+            if e.errno == errno.EEXIST:
+                pass
+            else:
+                raise
+        with open('.git/arc/default-relative-commit', 'w') as f:
+            f.write('origin/master')
 
     patch_name = "D" + id
     branch_name = "arcpatch-" + patch_name
