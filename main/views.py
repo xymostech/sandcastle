@@ -52,14 +52,15 @@ def dirserve(request, branch="", path=""):
     else:
         local = True
 
-    if local:
-        if call_git(["show-ref", "--verify", "--quiet",
-                     "refs/heads/%s" % branch]) != 0:
-            raise Http404
-    else:
-        if call_git(["show-ref", "--verify", "--quiet",
-                     "refs/remotes/%s/%s" % (user, branch)]) != 0:
-            raise Http404
+    try:
+        if local:
+            check_call_git(["show-ref", "--verify", "--quiet",
+                            "refs/heads/%s" % branch])
+        else:
+            check_call_git(["show-ref", "--verify", "--quiet",
+                            "refs/remotes/%s/%s" % (user, branch)])
+    except subprocess.CalledProcessError:
+        raise Http404
 
     if local:
         file_list = check_output_git([
@@ -101,14 +102,15 @@ def fileserve(request, branch="", path=""):
         user = ""
         local = True
 
-    if local:
-        if call_git(["show-ref", "--verify", "--quiet",
-                     "refs/heads/" + branch]) != 0:
-            raise Http404
-    else:
-        if call_git(["show-ref", "--verify", "--quiet",
-                     "refs/remotes/" + user + "/" + branch]) != 0:
-            raise Http404
+    try:
+        if local:
+            check_call_git(["show-ref", "--verify", "--quiet",
+                            "refs/heads/%s" % branch])
+        else:
+            check_call_git(["show-ref", "--verify", "--quiet",
+                            "refs/remotes/%s/%s" % (user, branch)])
+    except subprocess.CalledProcessError:
+        raise Http404
 
     if blob_or_tree(user, branch, path) == "tree":
         return dirserve(request, origbranch, path)
