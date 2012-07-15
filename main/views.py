@@ -12,6 +12,9 @@ from django.template import RequestContext
 from django.http import Http404, HttpResponse
 from django.utils import html, encoding
 from django.conf import settings
+import pygments
+import pygments.lexers
+import pygments.formatters
 
 base_dir = os.path.join(settings.PROJECT_DIR, "media", "master")
 git_dir = os.path.join(base_dir, ".git")
@@ -179,8 +182,13 @@ def render_diff(request, title, body, patch, user, branch):
         name = branch
     castle = "/castles/%s" % name
 
-    patch = html.escape(patch)
-    r_filename = re.compile(r'(?<=^\+\+\+ b/)(.+)$', re.MULTILINE)
+    patch = pygments.highlight(
+        patch,
+        pygments.lexers.DiffLexer(),
+        pygments.formatters.HtmlFormatter())
+
+    r_filename = re.compile(
+        r'(?<=^<span class="gi">\+\+\+ b/)(.+)(?=</span>$)', re.MULTILINE)
     all_files = r_filename.findall(patch)
     patch = r_filename.sub(r'<a href="%s/\1">\1</a>' % castle, patch, 0)
     patch_linked = html.mark_safe(patch)

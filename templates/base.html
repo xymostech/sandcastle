@@ -2,7 +2,8 @@
 <html>
 	<head>
 		<meta charset="UTF-8">
-		<title>sandcastle</title>
+		<title>{% block title %}{% endblock %}sandcastle</title>
+                <link rel="stylesheet" href="/media/pygments.css">
 	</head>
 	<body>
 		{% block content %}{% endblock %}
