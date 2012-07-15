@@ -22,16 +22,16 @@ def call_git(command, method=subprocess.call):
         ["git", "--git-dir", git_dir, "--work-tree", base_dir] + command)
 
 
-def output_git(command):
+def check_output_git(command):
     return call_git(command, subprocess.check_output)
 
 
 def blob_or_tree(user, branch, path):
     if user:
-        info = output_git(["ls-tree", "refs/remotes/%s/%s" % (user, branch),
-            path])
+        info = check_output_git([
+            "ls-tree", "refs/remotes/%s/%s" % (user, branch), path])
     else:
-        info = output_git(["ls-tree", "refs/heads/%s" % branch, path])
+        info = check_output_git(["ls-tree", "refs/heads/%s" % branch, path])
 
     return info.split(None, 3)[1]
 
@@ -55,10 +55,11 @@ def dirserve(request, branch="", path=""):
             raise Http404
 
     if local:
-        file_list = output_git(["ls-tree", "-z", "%s:%s" % (branch, path)])
+        file_list = check_output_git([
+            "ls-tree", "-z", "%s:%s" % (branch, path)])
     else:
-        file_list = output_git(["ls-tree", "-z",
-                                "%s/%s:%s" % (user, branch, path)])
+        file_list = check_output_git([
+            "ls-tree", "-z", "%s/%s:%s" % (user, branch, path)])
 
     file_list = file_list.strip('\0').split('\0')
 
@@ -106,9 +107,9 @@ def fileserve(request, branch="", path=""):
         return dirserve(request, origbranch, path)
 
     if local:
-        file = output_git(["show", branch + ":" + path])
+        file = check_output_git(["show", branch + ":" + path])
     else:
-        file = output_git(["show", user + "/" + branch + ":" + path])
+        file = check_output_git(["show", user + "/" + branch + ":" + path])
     type = mimetypes.guess_type(request.path)[0]
 
     return HttpResponse(file, content_type=type)
@@ -118,7 +119,7 @@ def home(request):
     call_git(["fetch", "-p", "origin"])
 
     branch_prefix = "refs/remotes/origin/"
-    branch_list = output_git(
+    branch_list = check_output_git(
         ["for-each-ref", "--format=%(refname)", branch_prefix + "*"])
 
     branch_list = branch_list.rstrip('\n').split("\n")
@@ -221,8 +222,8 @@ def phab(request, id=None):
     subprocess.call(["git", "branch", "-M", new_branch_name, branch_name])
     subprocess.call(["git", "checkout", "master"])
 
-    patch = output_git(["diff", "refs/remotes/origin/master...refs/heads/" +
-                        branch_name])
+    patch = check_output_git(["diff", "refs/remotes/origin/master..."
+                              "refs/heads/" + branch_name])
 
     return render_diff(request, patch_name, "", patch, "", branch_name)
 
@@ -266,7 +267,7 @@ def branch(request, branch=None):
              (user, settings.SANDCASTLE_REPO)])
     call_git(["fetch", user])
 
-    patch = output_git(["diff", "refs/remotes/origin/master...refs/remotes/" +
-                        user + "/" + branch])
+    patch = check_output_git(["diff", "refs/remotes/origin/master..."
+                              "refs/remotes/" + user + "/" + branch])
 
     return render_diff(request, title, "", patch, user, branch)
