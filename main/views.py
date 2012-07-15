@@ -178,15 +178,14 @@ def render_diff(request, title, body, patch, user, branch):
         name = branch
     castle = "/castles/%s" % name
 
+    r_filename = re.compile(r'(?<=^\+\+\+ b/)(.+)$', re.MULTILINE)
+    all_files = r_filename.findall(patch)
+
     patch = pygments.highlight(
         patch,
         pygments.lexers.DiffLexer(),
         pygments.formatters.HtmlFormatter())
 
-    r_filename = re.compile(
-        r'(?<=^<span class="gi">\+\+\+ b/)(.+)(?=</span>$)', re.MULTILINE)
-    all_files = r_filename.findall(patch)
-    patch = r_filename.sub(r'<a href="%s/\1">\1</a>' % castle, patch, 0)
     patch_linked = html.mark_safe(patch)
 
     context = {
