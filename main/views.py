@@ -1,5 +1,6 @@
 from urllib2 import urlopen, HTTPError
 from contextlib import closing
+import json
 import os
 import re
 import subprocess
@@ -8,7 +9,7 @@ import mimetypes
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.http import Http404, HttpResponse
-from django.utils import simplejson, html, encoding
+from django.utils import html, encoding
 from django.conf import settings
 
 base_dir = os.path.join(settings.PROJECT_DIR, "media", "master")
@@ -149,8 +150,8 @@ def home(request):
         close_fds=True)
     phab_data = arc_process.communicate('{"status": "status-open"}')[0]
 
-    pulls = simplejson.loads(pull_data)
-    phabs = simplejson.loads(phab_data)
+    pulls = json.loads(pull_data)
+    phabs = json.loads(phab_data)
 
     context = {
         'pulls': pulls,
@@ -224,7 +225,7 @@ def pull(request, number=None):
             pull_data = u.read()
     except HTTPError:
         raise Http404
-    pull_data = simplejson.loads(pull_data)
+    pull_data = json.loads(pull_data)
     user, branch = pull_data['head']['label'].split(":")
 
     call_git(["remote", "add", user,
