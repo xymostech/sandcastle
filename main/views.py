@@ -16,7 +16,7 @@ import pygments
 import pygments.lexers
 import pygments.formatters
 
-base_dir = os.path.join(settings.PROJECT_DIR, "media", "master")
+base_dir = os.path.join(settings.PROJECT_DIR, "media", "repo")
 git_dir = os.path.join(base_dir, ".git")
 
 
@@ -205,7 +205,7 @@ def render_diff(request, title, body, patch, user, branch):
 
 
 def phab(request, id=None):
-    os.chdir(os.path.join(settings.PROJECT_DIR, "media", "master"))
+    os.chdir(os.path.join(settings.PROJECT_DIR, "media", "repo"))
 
     # arc gets confused if this file doesn't exist with the proper contents
     if not os.path.isfile('.git/arc/default-relative-commit'):
