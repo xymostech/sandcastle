@@ -7,7 +7,7 @@ import re
 import subprocess
 import mimetypes
 
-from django.shortcuts import render_to_response
+from django.shortcuts import render_to_response, redirect
 from django.template import RequestContext
 from django.http import Http404, HttpResponse
 from django.utils import html, encoding
@@ -287,3 +287,7 @@ def branch(request, branch=None):
                               "refs/remotes/" + user + "/" + branch])
 
     return render_diff(request, title, "", patch, user, branch)
+
+
+def castle_redirect(request, branch="", path=""):
+    return redirect('fileserve', branch=branch, path=path, permanent=True)
