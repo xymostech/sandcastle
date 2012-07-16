@@ -1,1 +1,2 @@
-media/
+manage.py
+media/repo
