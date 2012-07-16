@@ -16,7 +16,7 @@
 <h2>Phabricator reviews</h2>
 <ul>
     {% for phab in phabs.response %}
-    <li><a href="{% url phab id=phab.id %}">D{{ phab.id }} - {{ phab.title }}</a></li>
+    <li><a href="{% url phab id=phab.id %}">D{{ phab.id }}</a></li>
     {% endfor %}
 </ul>
 
