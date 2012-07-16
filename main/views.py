@@ -211,7 +211,7 @@ def phab(request, id=None):
 
     if call_git(["show", "-s", "--format=%H", base_revision]):
         return HttpResponseForbidden(
-            "<h1>Error</h1><p>D%d is not a khan-exercises review.</p>" % id)
+            "<h1>Error</h1><p>D%s is not a khan-exercises review.</p>" % id)
 
     patch_name = "D" + id
     branch_name = "arcpatch-" + patch_name
