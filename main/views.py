@@ -43,52 +43,6 @@ def blob_or_tree(user, branch, path):
     return info.split(None, 3)[1]
 
 
-def dirserve(request, branch="", path=""):
-    origbranch = branch
-
-    if ":" in branch:
-        user, branch = branch.split(":")
-        local = False
-        ref = "refs/remotes/%s/%s" % (user, branch)
-    else:
-        local = True
-        ref = "refs/heads/%s" % branch
-
-    try:
-        check_call_git(["show-ref", "--verify", "--quiet", ref])
-    except subprocess.CalledProcessError:
-        raise Http404
-
-    if local:
-        file_list = check_output_git([
-            "ls-tree", "-z", "%s:%s" % (branch, path)])
-    else:
-        file_list = check_output_git([
-            "ls-tree", "-z", "%s/%s:%s" % (user, branch, path)])
-
-    file_list = file_list.strip('\0').split('\0')
-
-    files = []
-
-    for f in file_list:
-        _, blob_or_tree, _, name = f.split(None)
-
-        if blob_or_tree == 'tree':
-            name += '/'
-
-        files.append(name)
-
-    if path:
-        files.insert(0, '..')
-
-    files = ['<a href="%s">%s</a><br>' % (f, f) for f in files]
-
-    output = ["<h1>Directory for <strong>%s/%s%s</strong></h1>" %
-              (origbranch, path, '' if path == '' else '/')] + files
-
-    return HttpResponse(output)
-
-
 def fileserve(request, branch="", path=""):
     origbranch = branch
 
@@ -107,15 +61,42 @@ def fileserve(request, branch="", path=""):
         raise Http404
 
     if blob_or_tree(user, branch, path) == "tree":
-        return dirserve(request, origbranch, path)
+        if local:
+            file_list = check_output_git([
+                "ls-tree", "-z", "%s:%s" % (branch, path)])
+        else:
+            file_list = check_output_git([
+                "ls-tree", "-z", "%s/%s:%s" % (user, branch, path)])
 
-    if local:
-        file = check_output_git(["show", branch + ":" + path])
+        file_list = file_list.strip('\0').split('\0')
+
+        files = []
+
+        for f in file_list:
+            _, b_or_t, _, name = f.split(None)
+
+            if b_or_t == 'tree':
+                name += '/'
+
+            files.append(name)
+
+        if path:
+            files.insert(0, '..')
+
+        files = ['<a href="%s">%s</a><br>' % (f, f) for f in files]
+
+        output = ["<h1>Directory for <strong>%s/%s%s</strong></h1>" %
+                  (origbranch, path, '' if path == '' else '/')] + files
+
+        return HttpResponse(output)
     else:
-        file = check_output_git(["show", user + "/" + branch + ":" + path])
-    type = mimetypes.guess_type(request.path)[0]
+        if local:
+            file = check_output_git(["show", branch + ":" + path])
+        else:
+            file = check_output_git(["show", user + "/" + branch + ":" + path])
+        type = mimetypes.guess_type(request.path)[0]
 
-    return HttpResponse(file, content_type=type)
+        return HttpResponse(file, content_type=type)
 
 
 def home(request):
