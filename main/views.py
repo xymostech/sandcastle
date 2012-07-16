@@ -219,6 +219,18 @@ def phab(request, id=None):
         with open('.git/arc/default-relative-commit', 'w') as f:
             f.write('origin/master')
 
+    arc_process = subprocess.Popen(
+        ["arc", "call-conduit", "differential.getdiff"],
+        shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        close_fds=True)
+    phab_data = arc_process.communicate('{"revision_id": "%s"}' % id)[0]
+    phab_data = json.loads(phab_data)
+
+    base_revision = phab_data['response']['sourceControlBaseRevision']
+
+    if call_git(["show", "-s", "--format=%H", base_revision]):
+        return HttpResponse("<h1>Error</h1><p>This is not a khan-exercises review</p>")
+
     patch_name = "D" + id
     branch_name = "arcpatch-" + patch_name
     new_branch_name = branch_name + "-new"
