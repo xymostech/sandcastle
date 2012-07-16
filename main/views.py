@@ -9,7 +9,7 @@ import mimetypes
 
 from django.shortcuts import render_to_response, redirect
 from django.template import RequestContext
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.utils import html, encoding
 from django.conf import settings
 import pygments
@@ -229,8 +229,8 @@ def phab(request, id=None):
     base_revision = phab_data['response']['sourceControlBaseRevision']
 
     if call_git(["show", "-s", "--format=%H", base_revision]):
-        return HttpResponse("<h1>Error</h1><p>D%d is not a khan-exercises "
-                            "review.</p>" % id)
+        return HttpResponseForbidden(
+            "<h1>Error</h1><p>D%d is not a khan-exercises review.</p>" % id)
 
     patch_name = "D" + id
     branch_name = "arcpatch-" + patch_name
