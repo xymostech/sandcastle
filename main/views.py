@@ -229,7 +229,8 @@ def phab(request, id=None):
     base_revision = phab_data['response']['sourceControlBaseRevision']
 
     if call_git(["show", "-s", "--format=%H", base_revision]):
-        return HttpResponse("<h1>Error</h1><p>This is not a khan-exercises review</p>")
+        return HttpResponse("<h1>Error</h1><p>D%d is not a khan-exercises "
+                            "review.</p>" % id)
 
     patch_name = "D" + id
     branch_name = "arcpatch-" + patch_name
