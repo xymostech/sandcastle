@@ -34,6 +34,9 @@ def check_output_git(command):
 
 
 def blob_or_tree(user, branch, path):
+    if len(path) == 0:
+        return "tree"
+
     if user:
         info = check_output_git([
             "ls-tree", "refs/remotes/%s/%s" % (user, branch), path])
@@ -59,6 +62,8 @@ def fileserve(request, branch="", path=""):
         check_call_git(["show-ref", "--verify", "--quiet", ref])
     except subprocess.CalledProcessError:
         raise Http404
+
+    path = path.strip('/')
 
     if blob_or_tree(user, branch, path) == "tree":
         if local:
