@@ -161,7 +161,7 @@ def home(request):
         })
 
     with closing(urlopen(
-            "https://api.github.com/repos/%s/%s/pulls?per_page=100" %
+            "https://api.github.com/repos/%s/%s/pulls?per_page=30" %
             (settings.SANDCASTLE_USER, settings.SANDCASTLE_REPO))) as u:
         pull_data = u.read()
 
