@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<img src="/media/logo.png" width="309" height="71">
+
+<p>Sunflowers and daisies!</p>
+
+<h2>Branches</h2>
+<ul>
+	{% for branch in branches %}
+	<li><a href="{% url branch branch=branch.path %}">{{ branch.name }}</a></li>
+	{% endfor %}
+</ul>
+
+<h2>Phabricator reviews</h2>
+<ul>
+    {% for phab in phabs %}
+    <li><a href="{% url phab id=phab.id %}">D{{ phab.id }} - {{ phab.title }}</a></li>
+    {% endfor %}
+</ul>
+
+<h2>Pull Requests</h2>
+<ul>
+	{% for pull in pulls %}
+	<li><a href="{% url pull number=pull.number %}">{{ pull.title }}</a> - {{ pull.user.login }}</li>
+	{% endfor %}
+</ul>
+
+{% endblock %}

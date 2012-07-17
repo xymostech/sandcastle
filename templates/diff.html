@@ -1,12 +1,26 @@
 {% extends 'base.html' %}
 
+{% block title %}{{title}} | {% endblock %}
+
 {% block content %}
+
 <h2>{{ title }}</h2>
+
+{% if link %}
+<a href="{{ link }}">Link to review</a>
+{% endif %}
+
+{% if body %}
 <p>{{ body }}</p>
+{% endif %}
+
+<p><a href="{% url fileserve branch=branch path="" %}">Browse tree</a></p>
 <ul>
 {% for filename in all_files %}
 <li><a href="{{ castle }}/{{ filename }}">{{ filename }}</a></li>
 {% endfor %}
 </ul>
+
 <pre><code>{{ patch }}</code></pre>
+
 {% endblock %}

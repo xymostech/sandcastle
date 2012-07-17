@@ -7,7 +7,6 @@ from local_settings import *
 PROJECT_DIR = path.dirname(__file__)
 
 ADMINS = (
-    ('Julian Pulgarin', 'jp@julianpulgarin.com'),
 )
 
 # Following users are emailed when a broken link is detected
@@ -83,5 +82,12 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': True,
         },
+    }
+}
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': path.join(path.dirname(__file__), 'database.sqlite3')
     }
 }

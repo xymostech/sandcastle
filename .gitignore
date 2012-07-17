@@ -1,4 +1,4 @@
 local_settings.py
-media/*
-apache/*
+media/repo
 *.pyc
+*.sqlite3
