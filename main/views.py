@@ -64,7 +64,16 @@ def is_valid_phab_review(phab_id):
 
     base_revision = phab_data['response']['sourceControlBaseRevision']
 
-    return call_git(["show", "-s", "--format=%H", base_revision]) == 0
+    new_review = PhabricatorReview(review_id=phab_id)
+
+    if call_git(["show", "-s", "--format=%H", base_revision]) == 0:
+        new_review.exercise_related = True
+    else:
+        new_review.exercise_related = False
+
+    new_review.save()
+
+    return new_review.exercise_related
 
 
 def fileserve(request, branch="", path=""):
@@ -175,16 +184,8 @@ def home(request):
             if review.exercise_related:
                 phabs.append(phab)
         else:
-            new_review = PhabricatorReview(review_id=phab_id)
-
             if is_valid_phab_review(phab_id):
                 phabs.append(phab)
-                new_review.exercise_related = True
-            else:
-                new_review.exercise_related = False
-
-            new_review.save()
-
 
     context = {
         'pulls': pulls,
