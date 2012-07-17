@@ -49,6 +49,12 @@ def blob_or_tree(user, branch, path):
 
 
 def is_valid_phab_review(phab_id):
+    reviews = PhabricatorReview.objects.filter(review_id=phab_id)
+    if len(reviews) > 0:
+        review = reviews[0]
+        if review.exercise_related:
+            return True
+
     arc_process = subprocess.Popen(
         ["arc", "call-conduit", "differential.getdiff"],
         shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -241,7 +247,7 @@ def phab(request, id=None):
         with open('.git/arc/default-relative-commit', 'w') as f:
             f.write('origin/master')
 
-    if is_valid_phab_review(id):
+    if not is_valid_phab_review(id):
         return HttpResponseForbidden(
             "<h1>Error</h1><p>D%s is not a khan-exercises review.</p>" % id)
 
@@ -262,6 +268,8 @@ def phab(request, id=None):
 
     patch = check_output_git(["diff", "refs/remotes/origin/master..."
                               "refs/heads/" + branch_name])
+
+    os.chdir(settings.PROJECT_DIR)
 
     return render_diff(request, patch_name, "", patch, "", branch_name)
 

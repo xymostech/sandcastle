@@ -88,6 +88,6 @@ LOGGING = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'database.sqlite3'
+        'NAME': path.join(path.dirname(__file__), 'database.sqlite3')
     }
 }
