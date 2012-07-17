@@ -200,13 +200,7 @@ def home(request):
     )
 
 
-def render_diff(request, title, body, patch, user, branch):
-    if user:
-        name = "%s:%s" % (user, branch)
-    else:
-        name = branch
-    castle = "/castles/%s" % name
-
+def render_diff(patch):
     r_filename = re.compile(r'(?<=^\+\+\+ b/)(.+)$', re.MULTILINE)
     all_files = r_filename.findall(patch)
 
@@ -217,20 +211,7 @@ def render_diff(request, title, body, patch, user, branch):
 
     patch_linked = html.mark_safe(patch)
 
-    context = {
-        'title': title,
-        'body': body,
-        'patch': patch_linked,
-        'all_files': all_files,
-        'castle': castle,
-        'branch': name,
-    }
-
-    return render_to_response(
-        'diff.html',
-        context,
-        context_instance=RequestContext(request),
-    )
+    return [all_files, patch_linked]
 
 
 def phab(request, id=None):
@@ -272,7 +253,22 @@ def phab(request, id=None):
 
     os.chdir(settings.PROJECT_DIR)
 
-    return render_diff(request, patch_name, "", patch, "", branch_name)
+    all_files, patch_linked = render_diff(patch)
+
+    context = {
+        'title': patch_name,
+        'patch': patch_linked,
+        'all_files': all_files,
+        'castle': "/castles/%s" % branch,
+        'branch': branch,
+        'link': "http://phabricator.khanacademy.org/%s" % patch_name
+    }
+
+    return render_to_response(
+        'diff.html',
+        context,
+        context_instance=RequestContext(request),
+    )
 
 
 def pull(request, number=None):
@@ -298,14 +294,27 @@ def pull(request, number=None):
     with closing(urlopen(pull_data['diff_url'])) as u:
         patch = encoding.force_unicode(u.read(), errors='ignore')
 
-    return render_diff(request, pull_data['title'], pull_data['body'], patch,
-                       user, branch)
+    all_files, patch_linked = render_diff(patch)
+
+    context = {
+        'title': pull_data['title'],
+        'body': pull_data['body'],
+        'patch': patch_linked,
+        'all_files': all_files,
+        'castle': "/castles/%s:%s" % (user, branch),
+        'branch': "%s:%s" % (user, branch),
+        'link': pull_data['html_url'],
+    }
+
+    return render_to_response(
+        'diff.html',
+        context,
+        context_instance=RequestContext(request),
+    )
 
 
 def branch(request, branch=None):
     user = settings.SANDCASTLE_USER
-
-    title = branch
 
     if ":" in branch:
         user, branch = branch.split(":")
@@ -321,7 +330,21 @@ def branch(request, branch=None):
     patch = check_output_git(["diff", "refs/remotes/origin/master..."
                               "refs/remotes/" + user + "/" + branch])
 
-    return render_diff(request, title, "", patch, user, branch)
+    all_files, patch_linked = render_diff(patch)
+
+    context = {
+        'title': branch,
+        'patch': patch_linked,
+        'all_files': all_files,
+        'castle': "/castles/%s:%s" % (user, branch),
+        'branch': "%s:%s" % (user, branch),
+    }
+
+    return render_to_response(
+        'diff.html',
+        context,
+        context_instance=RequestContext(request),
+    )
 
 
 def castle_redirect(request, branch="", path=""):
