@@ -118,12 +118,16 @@ def fileserve(request, branch="", path=""):
         if path:
             files.insert(0, '..')
 
-        files = ['<a href="%s">%s</a><br>' % (f, f) for f in files]
+        context = {
+            'directory': "%s/%s%s" % (origbranch, path, '' if path == '' else '/'),
+            'files': files,
+        }
 
-        output = ["<h1>Directory for <strong>%s/%s%s</strong></h1>" %
-                  (origbranch, path, '' if path == '' else '/')] + files
-
-        return HttpResponse(output)
+        return render_to_response(
+            'dirlisting.html',
+            context,
+            context_instance=RequestContext(request),
+        )
     else:
         if local:
             file = check_output_git(["show", branch + ":" + path])
