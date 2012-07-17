@@ -16,6 +16,8 @@ import pygments
 import pygments.lexers
 import pygments.formatters
 
+from models import PhabricatorReview
+
 base_dir = os.path.join(settings.PROJECT_DIR, "media", "repo")
 git_dir = os.path.join(base_dir, ".git")
 
@@ -44,6 +46,19 @@ def blob_or_tree(user, branch, path):
         info = check_output_git(["ls-tree", "refs/heads/%s" % branch, path])
 
     return info.split(None, 3)[1]
+
+
+def is_valid_phab_review(phab_id):
+    arc_process = subprocess.Popen(
+        ["arc", "call-conduit", "differential.getdiff"],
+        shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        close_fds=True)
+    phab_data = arc_process.communicate('{"revision_id": "%s"}' % phab_id)[0]
+    phab_data = json.loads(phab_data)
+
+    base_revision = phab_data['response']['sourceControlBaseRevision']
+
+    return call_git(["show", "-s", "--format=%H", base_revision]) == 0
 
 
 def fileserve(request, branch="", path=""):
@@ -142,7 +157,28 @@ def home(request):
     phab_data = arc_process.communicate('{"status": "status-open"}')[0]
 
     pulls = json.loads(pull_data)
-    phabs = json.loads(phab_data)
+    test_phabs = json.loads(phab_data)
+
+    phabs = []
+
+    for phab in test_phabs["response"]:
+        phab_id = phab["id"]
+        reviews = PhabricatorReview.objects.filter(review_id=phab_id)
+        if len(reviews) > 0:
+            review = reviews[0]
+            if review.exercise_related:
+                phabs.append(phab)
+        else:
+            new_review = PhabricatorReview(review_id=phab_id)
+
+            if is_valid_phab_review(phab_id):
+                phabs.append(phab)
+                new_review.exercise_related = True
+            else:
+                new_review.exercise_related = False
+
+            new_review.save()
+
 
     context = {
         'pulls': pulls,
@@ -205,16 +241,7 @@ def phab(request, id=None):
         with open('.git/arc/default-relative-commit', 'w') as f:
             f.write('origin/master')
 
-    arc_process = subprocess.Popen(
-        ["arc", "call-conduit", "differential.getdiff"],
-        shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-        close_fds=True)
-    phab_data = arc_process.communicate('{"revision_id": "%s"}' % id)[0]
-    phab_data = json.loads(phab_data)
-
-    base_revision = phab_data['response']['sourceControlBaseRevision']
-
-    if call_git(["show", "-s", "--format=%H", base_revision]):
+    if is_valid_phab_review(id):
         return HttpResponseForbidden(
             "<h1>Error</h1><p>D%s is not a khan-exercises review.</p>" % id)
 

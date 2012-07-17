@@ -1,3 +1,4 @@
 local_settings.py
 media/repo
 *.pyc
+*.sqlite3
