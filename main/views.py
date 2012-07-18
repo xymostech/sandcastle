@@ -241,15 +241,15 @@ def phab(request, id=None):
     branch_name = "arcpatch-" + patch_name
     new_branch_name = branch_name + "-new"
 
-    check_call_git(["checkout", "--quiet", "origin/master"])
+    check_call_git(["checkout", "origin/master"])
     try:
-        check_call_git(["checkout", "--quiet", "-b", new_branch_name])
+        check_call_git(["checkout", "-b", new_branch_name])
         subprocess.check_call(["arc", "patch", "--nobranch", patch_name])
         check_call_git(["branch", "-M", new_branch_name, branch_name])
-        check_call_git(["checkout", "--quiet", "master"])
-    except subprocess.CalledProcessError, e:
-        call_git(["branch", "-D", new_branch_name])
         check_call_git(["checkout", "master"])
+    except subprocess.CalledProcessError, e:
+        check_call_git(["checkout", "master"])
+        call_git(["branch", "-D", new_branch_name])
         raise Http404
 
     patch = check_output_git(["diff", "refs/remotes/origin/master..."
