@@ -233,6 +233,8 @@ def phab(request, id=None):
         with open('.git/arc/default-relative-commit', 'w') as f:
             f.write('origin/master')
 
+    check_call_git(["fetch", "origin"])
+
     if not is_valid_phab_review(id):
         return HttpResponseForbidden(
             "<h1>Error</h1><p>D%s is not a khan-exercises review.</p>" % id)
@@ -241,7 +243,6 @@ def phab(request, id=None):
     branch_name = "arcpatch-" + patch_name
     new_branch_name = branch_name + "-new"
 
-    check_call_git(["pull", "origin", "master"])
     try:
         check_call_git(["checkout", "origin/master"])
         check_call_git(["checkout", "-b", new_branch_name])
