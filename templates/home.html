@@ -16,14 +16,14 @@
 <h2>Phabricator reviews</h2>
 <ul>
     {% for phab in phabs %}
-    <li><a href="{% url phab id=phab.id %}">D{{ phab.id }} - {{ phab.title }}</a></li>
+    <li><a href="{% url phab id=phab.id %}">D{{ phab.id }} &ndash; {{ phab.title }}</a></li>
     {% endfor %}
 </ul>
 
 <h2>Pull Requests</h2>
 <ul>
 	{% for pull in pulls %}
-	<li><a href="{% url pull number=pull.number %}">{{ pull.title }}</a> - {{ pull.user.login }}</li>
+	<li><a href="{% url pull number=pull.number %}">{{ pull.title }}</a> &ndash; {{ pull.user.login }}</li>
 	{% endfor %}
 </ul>
 
