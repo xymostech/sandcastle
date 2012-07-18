@@ -48,13 +48,7 @@ def blob_or_tree(user, branch, path):
     return info.split(None, 3)[1]
 
 
-def is_valid_phab_review(phab_id):
-    reviews = PhabricatorReview.objects.filter(review_id=phab_id)
-    if len(reviews) > 0:
-        review = reviews[0]
-        if review.exercise_related:
-            return True
-
+def get_base_phab_review(phab_id):
     arc_process = subprocess.Popen(
         ["arc", "call-conduit", "differential.getdiff"],
         shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -62,7 +56,16 @@ def is_valid_phab_review(phab_id):
     phab_data = arc_process.communicate('{"revision_id": "%s"}' % phab_id)[0]
     phab_data = json.loads(phab_data)
 
-    base_revision = phab_data['response']['sourceControlBaseRevision']
+    return phab_data['response']['sourceControlBaseRevision']
+
+
+def is_valid_phab_review(phab_id):
+    reviews = PhabricatorReview.objects.filter(review_id=phab_id)
+    if len(reviews) > 0:
+        review = reviews[0]
+        return review.exercise_related
+
+    base_revision = get_base_phab_review(phab_id)
 
     new_review = PhabricatorReview(review_id=phab_id)
 
@@ -244,7 +247,7 @@ def phab(request, id=None):
     new_branch_name = branch_name + "-new"
 
     try:
-        check_call_git(["checkout", "origin/master"])
+        check_call_git(["checkout", get_base_phab_review(id)])
         check_call_git(["checkout", "-b", new_branch_name])
         subprocess.check_call(["arc", "patch", "--nobranch", patch_name])
         check_call_git(["branch", "-M", new_branch_name, branch_name])
