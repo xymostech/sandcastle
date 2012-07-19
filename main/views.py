@@ -269,7 +269,7 @@ def phab(request, id=None):
         'patch': patch_linked,
         'all_files': all_files,
         'castle': "/castles/%s" % branch_name,
-        'branch': branch,
+        'branch': branch_name,
         'link': "http://phabricator.khanacademy.org/%s" % patch_name
     }
 
