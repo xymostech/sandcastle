@@ -181,18 +181,14 @@ def home(request):
     pulls = json.loads(pull_data)
     test_phabs = json.loads(phab_data)
 
-    phabs = []
+    unsorted_phabs = []
 
     for phab in test_phabs["response"]:
         phab_id = phab["id"]
-        reviews = PhabricatorReview.objects.filter(review_id=phab_id)
-        if len(reviews) > 0:
-            review = reviews[0]
-            if review.exercise_related:
-                phabs.append(phab)
-        else:
-            if is_valid_phab_review(phab_id):
-                phabs.append(phab)
+        if is_valid_phab_review(phab_id):
+            unsorted_phabs.append(phab)
+
+    phabs = sorted(unsorted_phabs, key=lambda phab: phab["id"], reverse=True)
 
     context = {
         'pulls': pulls,
