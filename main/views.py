@@ -18,34 +18,34 @@ import pygments.formatters
 
 from models import PhabricatorReview
 
-base_dir = os.path.join(settings.PROJECT_DIR, "media", "repo")
-git_dir = os.path.join(base_dir, ".git")
+media_dir = os.path.join(settings.PROJECT_DIR, "media")
 
 
-def call_git(command, method=subprocess.call):
-    return method(
-        ["git", "--git-dir", git_dir, "--work-tree", base_dir] + command)
-
-
-def check_call_git(command):
-    return call_git(command, subprocess.check_call)
-
-
-def check_output_git(command):
-    return call_git(command, subprocess.check_output)
-
-
-def blob_or_tree(user, branch, path):
-    if len(path) == 0:
-        return "tree"
-
-    if user:
-        info = check_output_git([
-            "ls-tree", "refs/remotes/%s/%s" % (user, branch), path])
+def make_base_dir(local=True, static_dir=""):
+    if local:
+        return os.path.join(media_dir, "repo")
     else:
-        info = check_output_git(["ls-tree", "refs/heads/%s" % branch, path])
+        return os.path.join(media_dir, "castles", static_dir)
 
-    return info.split(None, 3)[1]
+
+def make_git_dir(local=True, static_dir=""):
+    return os.path.join(make_base_dir(local, static_dir), ".git")
+
+
+def call_git(command, local=True, static_dir="", method=subprocess.call):
+    return method(
+        ["git", "--git-dir", make_git_dir(local, static_dir),
+            "--work-tree", make_base_dir(local, static_dir)] + command)
+
+
+def check_call_git(command, local=True, static_dir=""):
+    return call_git(command, local=local, static_dir=static_dir,
+                    method=subprocess.check_call)
+
+
+def check_output_git(command, local=True, static_dir=""):
+    return call_git(command, local=local, static_dir=static_dir,
+                    method=subprocess.check_output)
 
 
 def get_base_phab_review(phab_id):
