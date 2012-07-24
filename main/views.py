@@ -79,68 +79,6 @@ def is_valid_phab_review(phab_id):
     return new_review.exercise_related
 
 
-def fileserve(request, branch="", path=""):
-    origbranch = branch
-
-    if ":" in branch:
-        user, branch = branch.split(":")
-        local = False
-        ref = "refs/remotes/%s/%s" % (user, branch)
-    else:
-        user = ""
-        local = True
-        ref = "refs/heads/%s" % branch
-
-    try:
-        check_call_git(["show-ref", "--verify", "--quiet", ref])
-    except subprocess.CalledProcessError:
-        raise Http404
-
-    path = path.strip('/')
-
-    if blob_or_tree(user, branch, path) == "tree":
-        if local:
-            file_list = check_output_git([
-                "ls-tree", "-z", "%s:%s" % (branch, path)])
-        else:
-            file_list = check_output_git([
-                "ls-tree", "-z", "%s/%s:%s" % (user, branch, path)])
-
-        file_list = file_list.strip('\0').split('\0')
-
-        files = []
-
-        for f in file_list:
-            _, b_or_t, _, name = f.split(None)
-
-            if b_or_t == 'tree':
-                name += '/'
-
-            files.append(name)
-
-        if path:
-            files.insert(0, '..')
-
-        context = {
-            'directory': "%s/%s%s" % (origbranch, path, '' if path == '' else '/'),
-            'files': files,
-        }
-
-        return render_to_response(
-            'dirlisting.html',
-            context,
-            context_instance=RequestContext(request),
-        )
-    else:
-        if local:
-            file = check_output_git(["show", branch + ":" + path])
-        else:
-            file = check_output_git(["show", user + "/" + branch + ":" + path])
-        type = mimetypes.guess_type(request.path)[0]
-
-        return HttpResponse(file, content_type=type)
-
-
 def home(request):
     check_call_git(["fetch", "-p", "origin"])
 
