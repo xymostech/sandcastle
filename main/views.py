@@ -319,6 +319,3 @@ def branch(request, branch=None):
         context_instance=RequestContext(request),
     )
 
-
-def castle_redirect(request, branch="", path=""):
-    return redirect('fileserve', branch=branch, path=path, permanent=True)
