@@ -180,6 +180,16 @@ def update_static_dir(user, branch):
 
 
 def phab(request, id=None):
+    check_call_git(["fetch", "origin"])
+
+    if not is_valid_phab_review(id):
+        return HttpResponseForbidden(
+            "<h1>Error</h1><p>D%s is not a khan-exercises review.</p>" % id)
+
+    patch_name = "D" + id
+    branch_name = "arcpatch-" + patch_name
+    new_branch_name = branch_name + "-new"
+
     os.chdir(os.path.join(settings.PROJECT_DIR, "media", "repo"))
 
     # arc gets confused if this file doesn't exist with the proper contents
@@ -193,16 +203,6 @@ def phab(request, id=None):
                 raise
         with open('.git/arc/default-relative-commit', 'w') as f:
             f.write('origin/master')
-
-    check_call_git(["fetch", "origin"])
-
-    if not is_valid_phab_review(id):
-        return HttpResponseForbidden(
-            "<h1>Error</h1><p>D%s is not a khan-exercises review.</p>" % id)
-
-    patch_name = "D" + id
-    branch_name = "arcpatch-" + patch_name
-    new_branch_name = branch_name + "-new"
 
     try:
         check_call_git(["checkout", get_base_phab_review(id)])
