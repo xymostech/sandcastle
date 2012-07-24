@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import mimetypes
+import shutil
 
 from django.shortcuts import render_to_response, redirect
 from django.template import RequestContext
@@ -18,34 +19,34 @@ import pygments.formatters
 
 from models import PhabricatorReview
 
-base_dir = os.path.join(settings.PROJECT_DIR, "media", "repo")
-git_dir = os.path.join(base_dir, ".git")
+media_dir = os.path.join(settings.PROJECT_DIR, "media")
 
 
-def call_git(command, method=subprocess.call):
-    return method(
-        ["git", "--git-dir", git_dir, "--work-tree", base_dir] + command)
-
-
-def check_call_git(command):
-    return call_git(command, subprocess.check_call)
-
-
-def check_output_git(command):
-    return call_git(command, subprocess.check_output)
-
-
-def blob_or_tree(user, branch, path):
-    if len(path) == 0:
-        return "tree"
-
-    if user:
-        info = check_output_git([
-            "ls-tree", "refs/remotes/%s/%s" % (user, branch), path])
+def make_base_dir(local=True, static_dir=""):
+    if local:
+        return os.path.join(media_dir, "repo")
     else:
-        info = check_output_git(["ls-tree", "refs/heads/%s" % branch, path])
+        return os.path.join(media_dir, "castles", static_dir)
 
-    return info.split(None, 3)[1]
+
+def make_git_dir(local=True, static_dir=""):
+    return os.path.join(make_base_dir(local, static_dir), ".git")
+
+
+def call_git(command, local=True, static_dir="", method=subprocess.call):
+    return method(
+        ["git", "--git-dir", make_git_dir(local, static_dir),
+            "--work-tree", make_base_dir(local, static_dir)] + command)
+
+
+def check_call_git(command, local=True, static_dir=""):
+    return call_git(command, local=local, static_dir=static_dir,
+                    method=subprocess.check_call)
+
+
+def check_output_git(command, local=True, static_dir=""):
+    return call_git(command, local=local, static_dir=static_dir,
+                    method=subprocess.check_output)
 
 
 def get_base_phab_review(phab_id):
@@ -77,68 +78,6 @@ def is_valid_phab_review(phab_id):
     new_review.save()
 
     return new_review.exercise_related
-
-
-def fileserve(request, branch="", path=""):
-    origbranch = branch
-
-    if ":" in branch:
-        user, branch = branch.split(":")
-        local = False
-        ref = "refs/remotes/%s/%s" % (user, branch)
-    else:
-        user = ""
-        local = True
-        ref = "refs/heads/%s" % branch
-
-    try:
-        check_call_git(["show-ref", "--verify", "--quiet", ref])
-    except subprocess.CalledProcessError:
-        raise Http404
-
-    path = path.strip('/')
-
-    if blob_or_tree(user, branch, path) == "tree":
-        if local:
-            file_list = check_output_git([
-                "ls-tree", "-z", "%s:%s" % (branch, path)])
-        else:
-            file_list = check_output_git([
-                "ls-tree", "-z", "%s/%s:%s" % (user, branch, path)])
-
-        file_list = file_list.strip('\0').split('\0')
-
-        files = []
-
-        for f in file_list:
-            _, b_or_t, _, name = f.split(None)
-
-            if b_or_t == 'tree':
-                name += '/'
-
-            files.append(name)
-
-        if path:
-            files.insert(0, '..')
-
-        context = {
-            'directory': "%s/%s%s" % (origbranch, path, '' if path == '' else '/'),
-            'files': files,
-        }
-
-        return render_to_response(
-            'dirlisting.html',
-            context,
-            context_instance=RequestContext(request),
-        )
-    else:
-        if local:
-            file = check_output_git(["show", branch + ":" + path])
-        else:
-            file = check_output_git(["show", user + "/" + branch + ":" + path])
-        type = mimetypes.guess_type(request.path)[0]
-
-        return HttpResponse(file, content_type=type)
 
 
 def home(request):
@@ -217,7 +156,44 @@ def render_diff(patch):
     return [all_files, patch_linked]
 
 
+def update_static_dir(user, branch):
+    if user == "":
+        static_dir = branch
+        local_branch = branch
+        remote_branch = ""
+        local = True
+    else:
+        static_dir = "%s:%s" % (user, branch)
+        local_branch = "%s##%s" % (user, branch)
+        remote_branch = "refs/remotes/%s/%s" % (user, branch)
+        local = False
+
+    if not local:
+        check_call_git(["branch", "-f", local_branch, remote_branch])
+
+    if local:
+        shutil.rmtree(make_base_dir(False, static_dir), ignore_errors=True)
+
+    if not os.path.isdir(make_base_dir(False, static_dir)):
+        subprocess.check_call(["git", "clone", "--single-branch", "--depth", "1",
+            "file://" + make_base_dir(), "--branch", local_branch,
+            make_base_dir(False, static_dir)])
+    else:
+        check_call_git(["pull", "origin", local_branch], local=False,
+            static_dir=static_dir)
+
+
 def phab(request, id=None):
+    check_call_git(["fetch", "origin"])
+
+    if not is_valid_phab_review(id):
+        return HttpResponseForbidden(
+            "<h1>Error</h1><p>D%s is not a khan-exercises review.</p>" % id)
+
+    patch_name = "D" + id
+    branch_name = "arcpatch-" + patch_name
+    new_branch_name = branch_name + "-new"
+
     os.chdir(os.path.join(settings.PROJECT_DIR, "media", "repo"))
 
     # arc gets confused if this file doesn't exist with the proper contents
@@ -232,16 +208,6 @@ def phab(request, id=None):
         with open('.git/arc/default-relative-commit', 'w') as f:
             f.write('origin/master')
 
-    check_call_git(["fetch", "origin"])
-
-    if not is_valid_phab_review(id):
-        return HttpResponseForbidden(
-            "<h1>Error</h1><p>D%s is not a khan-exercises review.</p>" % id)
-
-    patch_name = "D" + id
-    branch_name = "arcpatch-" + patch_name
-    new_branch_name = branch_name + "-new"
-
     try:
         check_call_git(["checkout", get_base_phab_review(id)])
         check_call_git(["checkout", "-b", new_branch_name])
@@ -253,10 +219,12 @@ def phab(request, id=None):
         call_git(["branch", "-D", new_branch_name])
         raise Http404
 
+    os.chdir(settings.PROJECT_DIR)
+
+    update_static_dir("", branch_name)
+
     patch = check_output_git(["diff", "refs/remotes/origin/master..."
                               "refs/heads/" + branch_name])
-
-    os.chdir(settings.PROJECT_DIR)
 
     all_files, patch_linked = render_diff(patch)
 
@@ -264,7 +232,7 @@ def phab(request, id=None):
         'title': patch_name,
         'patch': patch_linked,
         'all_files': all_files,
-        'castle': "/castles/%s" % branch_name,
+        'castle': "/media/castles/%s" % branch_name,
         'branch': branch_name,
         'link': "http://phabricator.khanacademy.org/%s" % patch_name
     }
@@ -296,6 +264,8 @@ def pull(request, number=None):
               "git://github.com/%s/%s.git" % (user, settings.SANDCASTLE_REPO)])
     check_call_git(["fetch", user])
 
+    update_static_dir(user, branch)
+
     with closing(urlopen(pull_data['diff_url'])) as u:
         patch = encoding.force_unicode(u.read(), errors='ignore')
 
@@ -306,7 +276,7 @@ def pull(request, number=None):
         'body': pull_data['body'],
         'patch': patch_linked,
         'all_files': all_files,
-        'castle': "/castles/%s:%s" % (user, branch),
+        'castle': "/media/castles/%s:%s" % (user, branch),
         'branch': "%s:%s" % (user, branch),
         'link': pull_data['html_url'],
     }
@@ -332,6 +302,8 @@ def branch(request, branch=None):
              (user, settings.SANDCASTLE_REPO)])
     check_call_git(["fetch", user])
 
+    update_static_dir(user, branch)
+
     patch = check_output_git(["diff", "refs/remotes/origin/master..."
                               "refs/remotes/" + user + "/" + branch])
 
@@ -341,7 +313,7 @@ def branch(request, branch=None):
         'title': branch,
         'patch': patch_linked,
         'all_files': all_files,
-        'castle': "/castles/%s:%s" % (user, branch),
+        'castle': "/media/castles/%s:%s" % (user, branch),
         'branch': "%s:%s" % (user, branch),
     }
 
@@ -351,6 +323,3 @@ def branch(request, branch=None):
         context_instance=RequestContext(request),
     )
 
-
-def castle_redirect(request, branch="", path=""):
-    return redirect('fileserve', branch=branch, path=path, permanent=True)
