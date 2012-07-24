@@ -14,7 +14,7 @@
 <p>{{ body }}</p>
 {% endif %}
 
-<p><a href="{% url fileserve branch=branch path="" %}">Browse tree</a></p>
+<p><a href="/media/castles/{{branch}}">Browse tree</a></p>
 <ul>
 {% for filename in all_files %}
 <li><a href="{{ castle }}/{{ filename }}">{{ filename }}</a></li>

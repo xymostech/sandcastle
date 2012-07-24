@@ -215,10 +215,12 @@ def phab(request, id=None):
         call_git(["branch", "-D", new_branch_name])
         raise Http404
 
+    os.chdir(settings.PROJECT_DIR)
+
+    update_static_dir("", branch_name)
+
     patch = check_output_git(["diff", "refs/remotes/origin/master..."
                               "refs/heads/" + branch_name])
-
-    os.chdir(settings.PROJECT_DIR)
 
     all_files, patch_linked = render_diff(patch)
 
@@ -226,7 +228,7 @@ def phab(request, id=None):
         'title': patch_name,
         'patch': patch_linked,
         'all_files': all_files,
-        'castle': "/castles/%s" % branch_name,
+        'castle': "/media/castles/%s" % branch_name,
         'branch': branch_name,
         'link': "http://phabricator.khanacademy.org/%s" % patch_name
     }
@@ -258,6 +260,8 @@ def pull(request, number=None):
               "git://github.com/%s/%s.git" % (user, settings.SANDCASTLE_REPO)])
     check_call_git(["fetch", user])
 
+    update_static_dir(user, branch)
+
     with closing(urlopen(pull_data['diff_url'])) as u:
         patch = encoding.force_unicode(u.read(), errors='ignore')
 
@@ -268,7 +272,7 @@ def pull(request, number=None):
         'body': pull_data['body'],
         'patch': patch_linked,
         'all_files': all_files,
-        'castle': "/castles/%s:%s" % (user, branch),
+        'castle': "/media/castles/%s:%s" % (user, branch),
         'branch': "%s:%s" % (user, branch),
         'link': pull_data['html_url'],
     }
@@ -294,6 +298,8 @@ def branch(request, branch=None):
              (user, settings.SANDCASTLE_REPO)])
     check_call_git(["fetch", user])
 
+    update_static_dir(user, branch)
+
     patch = check_output_git(["diff", "refs/remotes/origin/master..."
                               "refs/remotes/" + user + "/" + branch])
 
@@ -303,7 +309,7 @@ def branch(request, branch=None):
         'title': branch,
         'patch': patch_linked,
         'all_files': all_files,
-        'castle': "/castles/%s:%s" % (user, branch),
+        'castle': "/media/castles/%s:%s" % (user, branch),
         'branch': "%s:%s" % (user, branch),
     }
 
