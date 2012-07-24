@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import mimetypes
+import shutil
 
 from django.shortcuts import render_to_response, redirect
 from django.template import RequestContext
@@ -169,6 +170,9 @@ def update_static_dir(user, branch):
 
     if not local:
         check_call_git(["branch", "-f", local_branch, remote_branch])
+
+    if local:
+        shutil.rmtree(make_base_dir(False, static_dir), ignore_errors=True)
 
     if not os.path.isdir(make_base_dir(False, static_dir)):
         subprocess.check_call(["git", "clone", "--single-branch", "--depth", "1",
