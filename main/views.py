@@ -155,6 +155,30 @@ def render_diff(patch):
     return [all_files, patch_linked]
 
 
+def update_static_dir(user, branch):
+    if user == "":
+        static_dir = branch
+        local_branch = branch
+        remote_branch = ""
+        local = True
+    else:
+        static_dir = "%s:%s" % (user, branch)
+        local_branch = "%s##%s" % (user, branch)
+        remote_branch = "refs/remotes/%s/%s" % (user, branch)
+        local = False
+
+    if not local:
+        check_call_git(["branch", "-f", local_branch, remote_branch])
+
+    if not os.path.isdir(make_base_dir(False, static_dir)):
+        subprocess.check_call(["git", "clone", "--single-branch", "--depth", "1",
+            "file://" + make_base_dir(), "--branch", local_branch,
+            make_base_dir(False, static_dir)])
+    else:
+        check_call_git(["pull", "origin", local_branch], local=False,
+            static_dir=static_dir)
+
+
 def phab(request, id=None):
     os.chdir(os.path.join(settings.PROJECT_DIR, "media", "repo"))
 
