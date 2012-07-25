@@ -179,7 +179,9 @@ def update_static_dir(user, branch):
             "file://" + make_base_dir(), "--branch", local_branch,
             make_base_dir(False, static_dir)])
     else:
-        check_call_git(["pull", "origin", local_branch], local=False,
+        check_call_git(["fetch", "origin", local_branch], local=False,
+            static_dir=static_dir)
+        check_call_git(["checkout", "FETCH_HEAD"], local=False,
             static_dir=static_dir)
 
 
