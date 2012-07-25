@@ -3,3 +3,4 @@ media/repo
 *.pyc
 *.sqlite3
 media/castles/*
+*.lock

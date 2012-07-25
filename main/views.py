@@ -7,6 +7,7 @@ import re
 import subprocess
 import mimetypes
 import shutil
+import fcntl
 
 from django.shortcuts import render_to_response, redirect
 from django.template import RequestContext
@@ -196,6 +197,9 @@ def phab(request, id=None):
     branch_name = "arcpatch-" + patch_name
     new_branch_name = branch_name + "-new"
 
+    lock_file = open("phab.lock", 'w')
+    fcntl.lockf(lock_file, fcntl.LOCK_EX)
+
     os.chdir(os.path.join(settings.PROJECT_DIR, "media", "repo"))
 
     # arc gets confused if this file doesn't exist with the proper contents
@@ -224,6 +228,8 @@ def phab(request, id=None):
     os.chdir(settings.PROJECT_DIR)
 
     update_static_dir("", branch_name)
+
+    fcntl.lockf(lock_file, fcntl.LOCK_EX)
 
     patch = check_output_git(["diff", "refs/remotes/origin/master..."
                               "refs/heads/" + branch_name])
