@@ -229,7 +229,7 @@ def phab(request, id=None):
 
     update_static_dir("", branch_name)
 
-    fcntl.lockf(lock_file, fcntl.LOCK_EX)
+    fcntl.lockf(lock_file, fcntl.LOCK_UN)
 
     patch = check_output_git(["diff", "refs/remotes/origin/master..."
                               "refs/heads/" + branch_name])
