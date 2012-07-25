@@ -197,39 +197,39 @@ def phab(request, id=None):
     branch_name = "arcpatch-" + patch_name
     new_branch_name = branch_name + "-new"
 
-    lock_file = open("phab.lock", 'w')
-    fcntl.lockf(lock_file, fcntl.LOCK_EX)
+    with open("phab.lock", 'w') as lock_file:
+        fcntl.lockf(lock_file, fcntl.LOCK_EX)
 
-    os.chdir(os.path.join(settings.PROJECT_DIR, "media", "repo"))
+        os.chdir(os.path.join(settings.PROJECT_DIR, "media", "repo"))
 
-    # arc gets confused if this file doesn't exist with the proper contents
-    if not os.path.isfile('.git/arc/default-relative-commit'):
+        # arc gets confused if this file doesn't exist with the proper contents
+        if not os.path.isfile('.git/arc/default-relative-commit'):
+            try:
+                os.mkdir('.git/arc')
+            except OSError, e:
+                if e.errno == errno.EEXIST:
+                    pass
+                else:
+                    raise
+            with open('.git/arc/default-relative-commit', 'w') as f:
+                f.write('origin/master')
+
         try:
-            os.mkdir('.git/arc')
-        except OSError, e:
-            if e.errno == errno.EEXIST:
-                pass
-            else:
-                raise
-        with open('.git/arc/default-relative-commit', 'w') as f:
-            f.write('origin/master')
+            check_call_git(["checkout", get_base_phab_review(id)])
+            check_call_git(["checkout", "-b", new_branch_name])
+            subprocess.check_call(["arc", "patch", "--nobranch", patch_name])
+            check_call_git(["branch", "-M", new_branch_name, branch_name])
+            check_call_git(["checkout", "master"])
+        except subprocess.CalledProcessError, e:
+            check_call_git(["checkout", "master"])
+            call_git(["branch", "-D", new_branch_name])
+            raise Http404
 
-    try:
-        check_call_git(["checkout", get_base_phab_review(id)])
-        check_call_git(["checkout", "-b", new_branch_name])
-        subprocess.check_call(["arc", "patch", "--nobranch", patch_name])
-        check_call_git(["branch", "-M", new_branch_name, branch_name])
-        check_call_git(["checkout", "master"])
-    except subprocess.CalledProcessError, e:
-        check_call_git(["checkout", "master"])
-        call_git(["branch", "-D", new_branch_name])
-        raise Http404
+        os.chdir(settings.PROJECT_DIR)
 
-    os.chdir(settings.PROJECT_DIR)
+        update_static_dir("", branch_name)
 
-    update_static_dir("", branch_name)
-
-    fcntl.lockf(lock_file, fcntl.LOCK_UN)
+        fcntl.lockf(lock_file, fcntl.LOCK_UN)
 
     patch = check_output_git(["diff", "refs/remotes/origin/master..."
                               "refs/heads/" + branch_name])
