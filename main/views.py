@@ -175,7 +175,7 @@ def update_static_dir(user, branch):
         shutil.rmtree(make_base_dir(False, static_dir), ignore_errors=True)
 
     if not os.path.isdir(make_base_dir(False, static_dir)):
-        subprocess.check_call(["git", "clone", "--single-branch", "--depth", "1",
+        subprocess.check_call(["git", "clone", "--depth", "1",
             "file://" + make_base_dir(), "--branch", local_branch,
             make_base_dir(False, static_dir)])
     else:
