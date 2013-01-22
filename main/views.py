@@ -199,7 +199,7 @@ def phab(request, id=None):
     branch_name = "arcpatch-" + patch_name
     new_branch_name = branch_name + "-new"
 
-    with open("phab.lock", 'w') as lock_file:
+    with open("/tmp/phab.lock", 'w') as lock_file:
         fcntl.lockf(lock_file, fcntl.LOCK_EX)
 
         os.chdir(os.path.join(settings.PROJECT_DIR, "media", "repo"))
