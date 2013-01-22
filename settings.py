@@ -1,13 +1,13 @@
 # Django settings for sandcastle project.
 from os import path
 
+ADMINS = (
+)
+
 # Look at local_settings.py.template for an example local_settings.py
 from local_settings import *
 
 PROJECT_DIR = path.dirname(__file__)
-
-ADMINS = (
-)
 
 # Following users are emailed when a broken link is detected
 SEND_BROKEN_LINK_EMAILS = False
