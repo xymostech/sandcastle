@@ -50,15 +50,21 @@ def check_output_git(command, local=True, static_dir=""):
                     method=subprocess.check_output)
 
 
-def get_base_phab_review(phab_id):
+def get_phab_data(phab_id):
     arc_process = subprocess.Popen(
         ["arc", "call-conduit", "differential.getdiff"],
         shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
         close_fds=True)
     phab_data = arc_process.communicate('{"revision_id": "%s"}' % phab_id)[0]
-    phab_data = json.loads(phab_data)
+    return json.loads(phab_data)
 
+
+def get_phab_base_revision(phab_data):
     return phab_data['response']['sourceControlBaseRevision']
+
+
+def get_phab_project_name(phab_data):
+    return phab_data['response']['projectName']
 
 
 def is_valid_phab_review(phab_id):
@@ -67,11 +73,15 @@ def is_valid_phab_review(phab_id):
         review = reviews[0]
         return review.exercise_related
 
-    base_revision = get_base_phab_review(phab_id)
+    phab_data = get_phab_data(phab_id)
+    project_name = get_phab_project_name(phab_data)
+    base_revision = get_phab_base_revision(phab_data)
 
     new_review = PhabricatorReview(review_id=phab_id)
 
-    if not base_revision:
+    if project_name == "khan-exercises":
+        new_review.exercise_related = True
+    elif not base_revision:
         new_review.exercise_related = False
     elif call_git(["show", "-s", "--format=%H", base_revision]) == 0:
         new_review.exercise_related = True
@@ -217,7 +227,9 @@ def phab(request, id=None):
                 f.write('origin/master')
 
         try:
-            check_call_git(["checkout", "--quiet", get_base_phab_review(id)])
+            phab_data = get_phab_data(id)
+            check_call_git(["checkout", "--quiet",
+                get_phab_base_revision(phab_data)])
             check_call_git(["checkout", "--quiet", "-b", new_branch_name])
             subprocess.check_call(["arc", "patch", "--nobranch", patch_name])
             check_call_git(["branch", "-M", new_branch_name, branch_name])
