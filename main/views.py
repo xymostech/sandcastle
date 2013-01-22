@@ -217,13 +217,13 @@ def phab(request, id=None):
                 f.write('origin/master')
 
         try:
-            check_call_git(["checkout", get_base_phab_review(id)])
-            check_call_git(["checkout", "-b", new_branch_name])
+            check_call_git(["checkout", "--quiet", get_base_phab_review(id)])
+            check_call_git(["checkout", "--quiet", "-b", new_branch_name])
             subprocess.check_call(["arc", "patch", "--nobranch", patch_name])
             check_call_git(["branch", "-M", new_branch_name, branch_name])
-            check_call_git(["checkout", "master"])
+            check_call_git(["checkout", "--quiet", "master"])
         except subprocess.CalledProcessError, e:
-            check_call_git(["checkout", "master"])
+            check_call_git(["checkout", "--quiet", "master"])
             call_git(["branch", "-D", new_branch_name])
             raise Http404
 
