@@ -71,7 +71,9 @@ def is_valid_phab_review(phab_id):
 
     new_review = PhabricatorReview(review_id=phab_id)
 
-    if call_git(["show", "-s", "--format=%H", base_revision]) == 0:
+    if not base_revision:
+        new_review.exercise_related = False
+    elif call_git(["show", "-s", "--format=%H", base_revision]) == 0:
         new_review.exercise_related = True
     else:
         new_review.exercise_related = False
