@@ -79,6 +79,8 @@ def is_valid_phab_review(phab_id):
 
     new_review = PhabricatorReview(review_id=phab_id)
 
+    # TODO(emily): at some point, when all reviews have this, we can simply
+    # ignore phabricator reviews without the correct project name
     if project_name == "khan-exercises":
         new_review.exercise_related = True
     elif not base_revision:
