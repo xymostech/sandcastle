@@ -5,13 +5,12 @@ import json
 import os
 import re
 import subprocess
-import mimetypes
 import shutil
 import fcntl
 
-from django.shortcuts import render_to_response, redirect
+from django.shortcuts import render_to_response
 from django.template import RequestContext
-from django.http import Http404, HttpResponse, HttpResponseForbidden
+from django.http import Http404, HttpResponseForbidden
 from django.utils import html, encoding
 from django.conf import settings
 import pygments
