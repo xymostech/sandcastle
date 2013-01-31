@@ -134,7 +134,11 @@ def home(request):
             if is_valid_phab_review(phab_id):
                 unsorted_phabs.append(phab)
 
-        phabs = sorted(unsorted_phabs, key=lambda phab: phab["id"], reverse=True)
+        phabs = sorted(
+            unsorted_phabs,
+            key=lambda phab: phab["id"],
+            reverse=True
+        )
     except ValueError:
         phabs = []
 
