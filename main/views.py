@@ -119,17 +119,24 @@ def home(request):
         close_fds=True)
     phab_data = arc_process.communicate('{"status": "status-open"}')[0]
 
-    pulls = json.loads(pull_data)
-    test_phabs = json.loads(phab_data)
+    try:
+        pulls = json.loads(pull_data)
+    except ValueError:
+        pulls = []
 
-    unsorted_phabs = []
+    try:
+        test_phabs = json.loads(phab_data)
 
-    for phab in test_phabs["response"]:
-        phab_id = phab["id"]
-        if is_valid_phab_review(phab_id):
-            unsorted_phabs.append(phab)
+        unsorted_phabs = []
 
-    phabs = sorted(unsorted_phabs, key=lambda phab: phab["id"], reverse=True)
+        for phab in test_phabs["response"]:
+            phab_id = phab["id"]
+            if is_valid_phab_review(phab_id):
+                unsorted_phabs.append(phab)
+
+        phabs = sorted(unsorted_phabs, key=lambda phab: phab["id"], reverse=True)
+    except ValueError:
+        phabs = []
 
     context = {
         'pulls': pulls,
